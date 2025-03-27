@@ -1,0 +1,15 @@
+{
+    "cars": [
+      {"name": "Fiat Uno", "price": 25000},
+      {"name": "Chevrolet Onix", "price": 45000},
+      {"name": "Volkswagen Gol", "price": 30000},
+      {"name": "Ford Ka", "price": 35000},
+      {"name": "Hyundai HB20", "price": 40000},
+      {"name": "Renault Kwid", "price": 28000},
+      {"name": "Toyota Etios", "price": 32000},
+      {"name": "Honda Fit", "price": 50000},
+      {"name": "Nissan March", "price": 27000},
+      {"name": "Peugeot 208", "price": 42000}
+    ]
+  }
+  
