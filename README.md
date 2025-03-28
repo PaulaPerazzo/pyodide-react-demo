@@ -1,70 +1,100 @@
-# Getting Started with Create React App
+# Integrating React + Pyodide
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This guide shows how to integrate **React** with **Pyodide**, enabling you to run Python code (and use Python libraries like `sad-cin`) directly in the browser.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Step 1: Load Pyodide in React
 
-### `npm start`
+First, include the Pyodide script in your `public/index.html` file to make it available globally in the browser:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pyodide com React</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+> This makes the `loadPyodide()` function available globally so it can be used inside your React app.
 
-### `npm test`
+> Here, **CDN** stands for **Content Delivery Network**. It's a network of servers distributed around the world that deliver content more quickly and reliably.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Step 2: Initialize Pyodide and Load Packages
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Inside your React component, create a state to hold the Pyodide instance:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```js
+const [pyodide, setPyodide] = useState(null);
+const [loadingPyodide, setLoadingPyodide] = useState(true);
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Then, use a `useEffect` hook to initialize Pyodide, install required packages with `micropip`, and define your Python function:
 
-### `npm run eject`
+```js
+  useEffect(() => {
+    async function loadPyodideAndPackages() {
+      try {
+        const pyodideInstance = await window.loadPyodide();
+        await pyodideInstance.loadPackage("micropip");
+        await pyodideInstance.runPythonAsync(`
+          import micropip
+          await micropip.install("sad-cin")
+          from sad_cin import decision_support
+          import json
+          
+          def get_results(json_str):
+              data = json.loads(json_str)
+              result = decision_support(data)
+              return json.dumps(result)
+          `);
+        setPyodide(pyodideInstance);
+      } catch (error) {
+        console.error("Erro ao carregar o Pyodide:", error);
+      } finally {
+        setLoadingPyodide(false);
+      }
+    }
+    loadPyodideAndPackages();
+  }, []);
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+> Unlike traditional Python, use `micropip.install("package-name")` instead of `pip install`.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Step 3: Call Python Function and Use the Result
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+You can now call the Python function from JavaScript and work with the result like a regular JSON object:
 
-## Learn More
+```js
+try {
+  const getResults = pyodide.globals.get("get_results");
+  const resultString = getResults(jsonStr); // jsonStr should be a JSON string
+  setResult(JSON.parse(resultString));
+} catch (error) {
+  console.error("Error running Python function:", error);
+}
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+This allows you to pass data from your React app to Python, run the decision support algorithm, and return the results as a usable JavaScript object.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## Summary
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Pyodide enables running Python in the browser.
+- `micropip` is used to install Python packages dynamically.
+- You can define Python functions inside your React app and call them from JavaScript.
+- The `sad-cin` package is the library we are currently coding in this course. At the moment, only VIKOR mcdm method is implemented.
+- You can use the file `vikor.json` as an example to run this code with `npm run start`.

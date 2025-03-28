@@ -4,22 +4,25 @@ import './App.css';
 function App() {
   const [pyodide, setPyodide] = useState(null);
   const [jsonFile, setJsonFile] = useState(null);
-  const [resultado, setResultado] = useState(null);
+  const [result, setResult] = useState(null);
   const [loadingPyodide, setLoadingPyodide] = useState(true);
 
-  // load Pyodide 
   useEffect(() => {
     async function loadPyodideAndPackages() {
       try {
         const pyodideInstance = await window.loadPyodide();
+        await pyodideInstance.loadPackage("micropip");
         await pyodideInstance.runPythonAsync(`
+          import micropip
+          await micropip.install("sad-cin")
+          from sad_cin import decision_support
           import json
-          def get_cheapest_cars(json_str):
+          
+          def get_results(json_str):
               data = json.loads(json_str)
-              cars = data["cars"]
-              cheapest = sorted(cars, key=lambda car: car["price"])[:2]
-              return json.dumps({"cheapest": cheapest})
-        `);
+              result = decision_support(data)
+              return json.dumps(result)
+          `);
         setPyodide(pyodideInstance);
       } catch (error) {
         console.error("Erro ao carregar o Pyodide:", error);
@@ -40,12 +43,18 @@ function App() {
     if (!jsonFile || !pyodide) return;
 
     const reader = new FileReader();
+    
     reader.onload = async (e) => {
-      const jsonStr = e.target.result;
+      let jsonStr = e.target.result;
+      
+      if (jsonStr.trim().startsWith("vikor_decision_support(")) {
+        jsonStr = jsonStr.replace(/^vikor_decision_support\(/, '').replace(/\)\s*$/, '');
+      }
+      
       try {
-        const getCheapest = pyodide.globals.get("get_cheapest_cars");
+        const getCheapest = pyodide.globals.get("get_results");
         const res = getCheapest(jsonStr);
-        setResultado(JSON.parse(res));
+        setResult(JSON.parse(res));
       } catch (error) {
         console.error("Erro ao processar o arquivo:", error);
       }
@@ -64,10 +73,10 @@ function App() {
           <button onClick={processarArquivo}>Processar</button>
         </>
       )}
-      {resultado && (
+      {result && (
         <div>
-          <h2>Dois Carros Mais Baratos:</h2>
-          <pre>{JSON.stringify(resultado, null, 2)}</pre>
+          <h2>Resultado do metodo:</h2>
+          <pre>{JSON.stringify(result, null, 2)}</pre>
         </div>
       )}
     </div>
